@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>One Pace - Plex Manager</title>
+    <meta
+      name="description"
+      content="Manage your One Pace collection with metadata updates and poster management"
+    />
+    <meta name="author" content="One Pace Team" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="assets/icons/app-icon.png"
+    />
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="assets/css/styles.css" />
+
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://docs.google.com" />
+    <link rel="preconnect" href="https://plex.tv" />
+    <link rel="preconnect" href="https://api.allorigins.win" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>One Pace - Plex Manager</h1>
+        <p>
+          Manage your One Pace collection with metadata updates and poster
+          management
+        </p>
+        <div
+          class="logo-container"
+          onclick="window.open('https://onepace.net', '_blank')"
+          aria-label="Visit One Pace website"
+        >
+          <img
+            src="https://onepace.net/_next/static/media/logo.18d15bdf.png"
+            alt="One Pace Logo"
+          />
+        </div>
+      </header>
+
+      <main class="main-content">
+        <!-- Prerequisite Section -->
+        <section class="section fade-in">
+          <h2>Prerequisite: Setup Media Files</h2>
+          <div class="form-group">
+            <div class="form-row">
+              <label for="renameMediaPath">Media Root Folder:</label>
+              <input
+                type="text"
+                id="renameMediaPath"
+                placeholder="Select media root folder"
+                readonly
+                aria-describedby="media-path-help"
+              />
+              <div class="file-input">
+                <input
+                  type="file"
+                  id="mediaFolderInput"
+                  webkitdirectory
+                  multiple
+                  aria-label="Select media folder"
+                />
+                <button
+                  onclick="document.getElementById('mediaFolderInput').click()"
+                  aria-describedby="browse-help"
+                >
+                  Browse
+                </button>
+              </div>
+              <button
+                class="success"
+                onclick="renameMediaFiles()"
+                id="renameBtn"
+                disabled
+              >
+                Rename Now
+              </button>
+            </div>
+            <small id="media-path-help" style="color: var(--clr-surface-a50)"
+              >Select the folder containing your One Pace media files</small
+            >
+
+            <div class="form-row">
+              <label for="downloadPath">Download Assets:</label>
+              <input
+                type="text"
+                id="downloadPath"
+                placeholder="Assets will be downloaded to browser"
+                readonly
+              />
+              <button
+                class="warning"
+                onclick="downloadAssets()"
+                id="downloadBtn"
+              >
+                Download ZIP
+              </button>
+              <button
+                class="secondary"
+                onclick="extractAssets()"
+                id="extractBtn"
+                disabled
+              >
+                Extract & Process
+              </button>
+            </div>
+            <small id="browse-help" style="color: var(--clr-surface-a50)"
+              >Download poster assets and metadata from GitHub</small
+            >
+          </div>
+        </section>
+
+        <!-- Authentication Tabs -->
+        <section class="section fade-in">
+          <div class="tabs" role="tablist">
+            <div
+              class="tab active"
+              onclick="switchTab('plex')"
+              role="tab"
+              aria-selected="true"
+              tabindex="0"
+            >
+              Plex Login
+            </div>
+            <div
+              class="tab"
+              onclick="switchTab('jellyfin')"
+              role="tab"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Jellyfin Login
+            </div>
+          </div>
+
+          <!-- Plex Tab -->
+          <div id="plex-tab" class="tab-content" role="tabpanel">
+            <h2>Step 1: Login to Plex</h2>
+            <div class="form-group">
+              <div class="form-row">
+                <label for="plexUser">Username/Email:</label>
+                <input
+                  type="text"
+                  id="plexUser"
+                  placeholder="Enter Plex username or email"
+                  autocomplete="username"
+                />
+                <div class="connection-status">
+                  <div
+                    class="status-dot"
+                    id="plexStatus"
+                    aria-hidden="true"
+                  ></div>
+                  <span id="plexStatusText">Disconnected</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <label for="plexPass">Password (+2FA):</label>
+                <input
+                  type="password"
+                  id="plexPass"
+                  placeholder="Enter password (include 2FA if applicable)"
+                  autocomplete="current-password"
+                />
+                <small style="color: var(--clr-surface-a50)"
+                  >Hint: mypassword123456</small
+                >
+              </div>
+              <div class="form-row">
+                <button onclick="getPlexToken()" id="plexLoginBtn">
+                  Get Token
+                </button>
+                <div class="checkbox-item">
+                  <input type="checkbox" id="cacheToken" />
+                  <label for="cacheToken">Cache Token</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Jellyfin Tab -->
+          <div id="jellyfin-tab" class="tab-content hidden" role="tabpanel">
+            <h2>Step 1b: Jellyfin</h2>
+            <div class="form-group">
+              <div class="form-row">
+                <label for="jellyfinUrl">Jellyfin URL:</label>
+                <input
+                  type="url"
+                  id="jellyfinUrl"
+                  placeholder="http://localhost:8096"
+                />
+                <div class="checkbox-item">
+                  <input type="checkbox" id="cacheJellyfinUrl" />
+                  <label for="cacheJellyfinUrl">Cache URL</label>
+                </div>
+              </div>
+              <div class="form-row">
+                <label for="jellyfinToken">API Key:</label>
+                <input
+                  type="password"
+                  id="jellyfinToken"
+                  placeholder="Enter Jellyfin API Key"
+                />
+                <div class="checkbox-item">
+                  <input type="checkbox" id="cacheJellyfinToken" />
+                  <label for="cacheJellyfinToken">Cache API</label>
+                </div>
+                <div class="connection-status">
+                  <div
+                    class="status-dot"
+                    id="jellyfinStatus"
+                    aria-hidden="true"
+                  ></div>
+                  <span id="jellyfinStatusText">Disconnected</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <button onclick="testJellyfinConnection()" id="jellyfinTestBtn">
+                  Test Connection
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Server Selection -->
+        <section class="section fade-in">
+          <h2>Step 2: Select Server</h2>
+          <div class="form-group">
+            <div class="form-row">
+              <button onclick="getServers()" id="getServersBtn" disabled>
+                Get Servers
+              </button>
+              <div style="flex: 1">
+                <div
+                  class="list-container"
+                  id="serverList"
+                  role="listbox"
+                  aria-label="Available servers"
+                >
+                  <div
+                    class="list-item"
+                    style="color: var(--clr-surface-a50); font-style: italic"
+                  >
+                    Please authenticate first
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Search Section -->
+        <section class="section fade-in">
+          <h2>Step 3: Search Show</h2>
+          <div class="form-group">
+            <div class="form-row">
+              <label for="searchTerm">Show Name:</label>
+              <input
+                type="text"
+                id="searchTerm"
+                value="One Pace"
+                placeholder="Enter show name"
+              />
+              <button onclick="searchShow('plex')" id="searchPlexBtn" disabled>
+                Search In Plex
+              </button>
+              <button
+                onclick="searchShow('jellyfin')"
+                id="searchJellyfinBtn"
+                disabled
+              >
+                Search In Jellyfin
+              </button>
+            </div>
+            <div class="form-row">
+              <label>Search Results:</label>
+              <div style="flex: 1">
+                <div
+                  class="list-container"
+                  id="searchResults"
+                  role="listbox"
+                  aria-label="Search results"
+                >
+                  <div
+                    class="list-item"
+                    style="color: var(--clr-surface-a50); font-style: italic"
+                  >
+                    No search results
+                  </div>
+                </div>
+                <div
+                  id="selectedShow"
+                  style="
+                    margin-top: var(--spacing-md);
+                    font-weight: 600;
+                    color: var(--clr-primary-a40);
+                  "
+                  aria-live="polite"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Edit Options -->
+        <section class="section fade-in">
+          <h2>Edit Options</h2>
+          <div
+            class="checkbox-group"
+            role="group"
+            aria-labelledby="edit-options-heading"
+          >
+            <div class="checkbox-item">
+              <input type="checkbox" id="updateTitle" />
+              <label for="updateTitle">Update Episode Title</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="updateSeasonTitle" />
+              <label for="updateSeasonTitle">Update Season Title</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="updateDescription" />
+              <label for="updateDescription">Update Description</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="updateDate" />
+              <label for="updateDate">Update Air Date</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="updatePosters" />
+              <label for="updatePosters">Update Posters</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="dryRun" checked />
+              <label for="dryRun">Dry Run (no changes)</label>
+            </div>
+          </div>
+        </section>
+
+        <!-- Apply Changes -->
+        <section class="section fade-in">
+          <h2>Step 4: Apply Edits</h2>
+          <div class="form-group">
+            <div class="form-row">
+              <label>Progress:</label>
+              <div style="flex: 1">
+                <div
+                  class="progress-bar"
+                  role="progressbar"
+                  aria-valuenow="0"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <span id="progressText" aria-live="polite">Ready to start</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <button
+                class="success"
+                onclick="applyOnePaceEdits()"
+                id="applyBtn"
+                disabled
+              >
+                Apply OnePace Edits
+              </button>
+              <button class="secondary" onclick="clearOutput()">
+                Clear Output
+              </button>
+              <button
+                class="danger"
+                onclick="stopOperation()"
+                id="stopBtn"
+                disabled
+              >
+                Stop Operation
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Output Section -->
+        <section class="section fade-in">
+          <h2>Output Log</h2>
+          <div
+            class="output-container"
+            id="outputLog"
+            role="log"
+            aria-live="polite"
+            aria-label="Application output log"
+          >
+            One Pace Plex Manager - Full Implementation
+            ====================================== Ready to manage your
+            collection with real API integration! Features: - Real Plex/Jellyfin
+            API integration - Google Sheets data loading - File processing and
+            renaming - Metadata updates with progress tracking Please start by
+            authenticating with your media server...
+          </div>
+        </section>
+      </main>
+
+      <footer class="status-bar">
+        <span id="statusMessage" aria-live="polite"
+          >Ready - Select authentication method to begin</span
+        >
+        <span id="versionInfo">v2.0.0 - Full Implementation</span>
+      </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/app.js"></script>
+  </body>
+</html>
